@@ -1,0 +1,176 @@
+import random
+from scene import *
+
+
+'''
+Ayumu (born 24 April 2000) is a chimpanzee currently living at the Primate Research Institute of Kyoto University. He is the son of chimpanzee Ai, and has been a participant since infancy in the Ai Project, an ongoing research effort aimed at understanding chimpanzee cognition. As part of the Ai Project, Ayumu participated in a series of short-term memory tasks, such as to remember the sequential order of numbers displaying on a touch-sensitive computer screen. His performance in the tasks was superior to that of comparably trained university students, leading to a conclusion that young chimpanzees have better working memory than adult humans.
+
+'''
+
+side, offsetX, offsetY = 0, 0, 0
+objects = 5
+columns = 8
+badge = 0
+numbers = []
+visible = True
+timeEnd = 0.8
+waitTime = timeEnd
+w = 0
+h = 0
+msg = ''
+r = random.random()
+g = random.random()
+b = random.random()
+
+
+# Set x and y offsets for drawing
+def setVars(w, h):
+	global offsetX, offsetY, side
+	side = min(w, h)
+	if (w > h):
+		z = w - side
+		offsetX = z - z / 2
+		offsetY = 0
+	else:
+		offsetX = 0
+		z = h - side
+		offsetY = z - z / 2
+	return offsetX, offsetY, side
+
+# Returns a list of random numbers between 0 and 64
+def createNumbers(objects):
+	numArr = []
+	for n in range(0, objects):
+		while(True):
+			rnd = random.randint(0, 63)
+			try:
+				pos = numArr.index(rnd)
+			except ValueError:
+				break
+			else:
+				pass
+		numArr.append(rnd)
+	return numArr
+
+def arrows(self, switch):
+	if (switch == True):
+		self.add_child(self.larrowUp)
+		self.add_child(self.larrowDo)
+		self.add_child(self.rarrowUp)
+		self.add_child(self.rarrowDo)
+		self.add_child(self.button)
+	else:
+		self.larrowUp.remove_from_parent()
+		self.larrowDo.remove_from_parent()
+		self.rarrowUp.remove_from_parent()
+		self.rarrowDo.remove_from_parent()
+		self.button.remove_from_parent()
+
+
+def sprintf(format, *objects):
+	return format % tuple(objects)
+
+
+class Ayumu (Scene):
+	def setup(self):
+		global offsetX, offsetY, side, numbers, timeEnd, w, h, r, g, b
+		w, h = self.size
+		offsetX, offsetY, side = setVars(w, h)
+		numbers = createNumbers(objects)
+		factor = side / columns
+		self.background_color = '#99bed6'
+		self.larrowUp = SpriteNode('iow:arrow_up_b_256', scale=.3)
+		self.larrowUp.anchor_point = (0.5, 0)
+		self.larrowUp.position = (factor/2, 60)
+		self.larrowDo = SpriteNode('iow:arrow_down_b_256', scale=.3)
+		self.larrowDo.anchor_point = (0.5, 0)
+		self.larrowDo.position = (factor/2, 0)
+		self.rarrowUp = SpriteNode('iow:arrow_up_b_256', scale=.3)
+		self.rarrowUp.anchor_point = (0.5, 0)
+		self.rarrowUp.position = (w-factor/2, 60)
+		self.rarrowDo = SpriteNode('iow:arrow_down_b_256', scale=.3)
+		self.rarrowDo.anchor_point = (0.5, 0)
+		self.rarrowDo.position = (w-factor/2, 0)
+		self.button = SpriteNode('iow:social_youtube_outline_256', scale=0.6)
+		self.button.anchor_point = (0.5, 0)
+		self.button.position = (w/2, 40)
+
+	def draw(self):
+		global offsetX, offsetY, side, objects, numbers, visible
+		factor = side / columns
+		radius = factor - 10
+		plus = factor / 2.2
+		count = 1
+		for f in numbers:
+			x, y = divmod(f, 8)
+			fill(r, g, b)
+			ellipse(offsetX+x*factor, offsetY+y*factor, radius, radius)
+			if (visible):
+				tint(1, 1, 1)
+				text(str(count), 'Helvetica', 72, plus+offsetX+x*factor, plus+offsetY+y*factor)
+				count += 1
+		if (self.t > timeEnd):
+			visible = False
+		if (msg != ''):
+			#fill(0,0,0)
+			text(msg, 'Helvetica', 100, w/2, h/2, 5) # 1=BL,2=BM,3=BR,4=ML,5=MM,6=TR,7=TL,9=TR
+			text(sprintf("%.1f s", waitTime), 'Helvetica', 22, factor, 83, 3)
+			text(str(objects), 'Helvetica', 22, w-factor, 83, 1)
+			#rect(w/2-factor, 60, factor+factor, 116)
+
+	def touch_began(self, touch):
+		pass
+
+	def touch_ended(self, touch):
+		global numbers, visible, timeEnd, badge, msg, objects, waitTime, r, g, b, w
+		tx, ty = touch.location
+		factor = side / columns
+		if (not visible and badge < objects): # Check order of touches
+			bx, by = divmod(numbers[badge], 8)
+			bx = bx * factor + offsetX
+			by = by * factor + offsetY
+			if (tx > bx and tx < (bx + factor) and ty > by and ty < (by + factor)):
+				badge += 1
+				if (badge == objects):
+					msg = 'Bravo !'
+					arrows(self, True)
+			else:
+				msg = 'Perdu !'
+				badge = objects
+				arrows(self, True)
+		else: # Wait for user input
+			visible = True
+			timeEnd = self.t + 3
+			if (tx < 100):
+				if (ty > 74 and ty < 138):
+					waitTime += .1
+				elif (ty < 64 and waitTime > .25):
+					waitTime -= .1
+			elif (tx > w-100):
+				if (ty > 74 and ty < 138 and objects < 16):
+					objects += 1
+				elif (ty < 64 and objects > 1):
+					objects -= 1
+				badge = objects
+			elif (tx > w/2-factor and tx < w/2+factor and ty > 60 and ty < 176):
+				arrows(self, False)		
+				numbers = createNumbers(objects)
+				visible = True
+				msg = ''
+				badge = 0
+				r = random.random()/2
+				g = random.random()/2
+				b = random.random()/2
+				timeEnd = self.t + waitTime
+
+	def did_change_size(self):
+		global offsetX, offsetY, side, w, h
+		w, h = self.size
+		offsetX, offsetY, side = setVars(w, h)
+		factor = side / columns
+		self.rarrowDo.position = (w-factor/2, 0)
+		self.rarrowUp.position = (w-factor/2, 60)
+		self.button.position = (w/2, 40)
+
+if __name__ == '__main__':
+	run(Ayumu(), multi_touch=False)
